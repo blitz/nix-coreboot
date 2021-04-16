@@ -86,6 +86,11 @@ rec {
     # This is conceptually similar to how externally-built binary
     # packages, such as Steam or MS Teams, are built. autoPatchelfHook
     # is taking care of the heavy lifting here.
+    #
+    # There is small wrinkle here: autoPatchelfHook assumes it has a
+    # working compilation environment with binutils. That's why we use
+    # `mkDerivation` instead of `mkDerivationNoCC` for the toolchain
+    # derivation.
     nativeBuildInputs = [ corebootEnv pkgs.autoPatchelfHook ];
     buildInputs = [ pkgs.zlib pkgs.flex pkgs.gcc.cc.lib ];
 
@@ -100,16 +105,15 @@ rec {
       ln -s ${acpicaTar} util/crossgcc/tarballs/${acpicaTarName}
     '';
 
-    buildPhase = ''
-      cat > build.sh <<EOF
+    buildPhase = let
+      buildScript = pkgs.writeText "coreboot-toolchain-build" ''
+        export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
-      export PATH=/bin:/sbin:/usr/bin:/usr/sbin
-
-      mkdir -p $out
-      make crossgcc-i386 CPUS=$(nproc) DEST=$out
-      EOF
-
-      coreboot-env build.sh
+        mkdir -p $out
+        make crossgcc-i386 CPUS=$(nproc) DEST=$out
+      '';
+    in ''
+      coreboot-env ${buildScript}
     '';
 
     installPhase = ''
