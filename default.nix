@@ -59,13 +59,13 @@ in rec {
     targetPkgs = pkgs: with pkgs; [ gcc binutils gnumake coreutils patch zlib zlib.dev curl git m4 bison flex ];
   };
 
-  corebootToolchain = pkgs.stdenvNoCC.mkDerivation {
+  corebootToolchain = pkgs.stdenv.mkDerivation {
     pname = "coreboot-toolchain";
     version = "4.13";
 
     src = corebootSource;
 
-    nativeBuildInputs = [ corebootEnv pkgs.binutils pkgs.autoPatchelfHook ];
+    nativeBuildInputs = [ corebootEnv pkgs.autoPatchelfHook ];
     buildInputs = [ pkgs.zlib pkgs.flex pkgs.gcc.cc.lib ];
 
     postPatch = ''
