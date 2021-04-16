@@ -1,6 +1,10 @@
 let
   sources = import ./nix/sources.nix;
-  pkgs = import sources.nixpkgs {};
+  pkgs = import sources.nixpkgs { };
+
+  ###
+  ### Coreboot Toolchain Sources
+  ###
 
   gmpTarName = "gmp-6.2.0.tar.xz";
   gmpTar = pkgs.fetchurl {
@@ -46,25 +50,42 @@ let
     sha256 = "0jyy71szjr40c8v40qqw6yh3gfk8d6sl3nay69zrn5d88i3r0jca";
   };
 
+  ###
+  ### Coreboot Sources
+  ###
+
   corebootVersion = "4.13";
   corebootSource = builtins.fetchTarball {
     url = "https://coreboot.org/releases/coreboot-${corebootVersion}.tar.xz";
     sha256 = "10zcl88dk1qlsi119kzd2ck38sk7r4xzv7aaww8vjc418hm0wv50";
   };
 
-in rec {
+in
+rec {
 
+  # We first prepare a FHS-compatible chroot environment with all
+  # dependencies that the coreboot toolchain requires to build.
   corebootEnv = pkgs.buildFHSUserEnv {
     name = "coreboot-env";
     targetPkgs = pkgs: with pkgs; [ gcc binutils gnumake coreutils patch zlib zlib.dev curl git m4 bison flex ];
   };
 
+  # Then we build the coreboot toolchain in this chroot. We manually
+  # link all the sources into the right place, because the build is
+  # sandboxed and is not allowed to fech from the network on its own.
   corebootToolchain = pkgs.stdenv.mkDerivation {
     pname = "coreboot-toolchain";
     version = "4.13";
 
     src = corebootSource;
 
+    # Because the binaries that are build in the chroot reference
+    # shared libraries in a way that will not work outside of it, we
+    # need to patch the resulting ELFs.
+    #
+    # This is conceptually similar to how externally-built binary
+    # packages, such as Steam or MS Teams, are built. autoPatchelfHook
+    # is taking care of the heavy lifting here.
     nativeBuildInputs = [ corebootEnv pkgs.autoPatchelfHook ];
     buildInputs = [ pkgs.zlib pkgs.flex pkgs.gcc.cc.lib ];
 
@@ -97,6 +118,13 @@ in rec {
 
   };
 
+  # Finally, we can build coreboot itself. It's cross compilation
+  # scripting (xcompile) will find its toolchain in PATH and use it to
+  # build the target binaries. The normal Nix toolchain is used for
+  # host binaries.
+  #
+  # The coreboot build is well-behaved, so there is no need to do it
+  # in a chroot.
   coreboot = pkgs.stdenv.mkDerivation {
     pname = "coreboot";
     version = corebootVersion;
