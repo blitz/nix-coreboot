@@ -55,9 +55,9 @@ let
   ###
 
   corebootVersion = "4.13";
-  corebootSource = builtins.fetchTarball {
+  corebootSource = pkgs.fetchurl {
     url = "https://coreboot.org/releases/coreboot-${corebootVersion}.tar.xz";
-    sha256 = "10zcl88dk1qlsi119kzd2ck38sk7r4xzv7aaww8vjc418hm0wv50";
+    sha256 = "0sl50aajnah4a138sr3jjm3ydc8gfh5vvlhviz3ypp95b9jdlya7";
   };
 
 in
@@ -144,7 +144,7 @@ rec {
     buildPhase = ''
       cp ${./config} .config
 
-      make oldconfig
+      make olddefconfig
       make
     '';
 
