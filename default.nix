@@ -63,11 +63,23 @@ let
 in
 rec {
 
+  # Coreboot requires a toolchain with C++ and Ada support, so build
+  # one ourselves. This is modeled after the pkgs.gnat derivations
+  # from nixpkgs.
+  gnatWithCxx = pkgs.wrapCC (pkgs.gcc10.cc.override {
+    name = "gnat";
+    langC = true;
+    langCC = true;
+    langAda = true;
+    profiledCompiler = false;
+    gnatboot = pkgs.gnat6;
+  });
+
   # We first prepare a FHS-compatible chroot environment with all
   # dependencies that the coreboot toolchain requires to build.
   corebootEnv = pkgs.buildFHSUserEnv {
     name = "coreboot-env";
-    targetPkgs = pkgs: with pkgs; [ gcc binutils gnumake coreutils patch zlib zlib.dev curl git m4 bison flex ];
+    targetPkgs = pkgs: with pkgs; [ gnatWithCxx binutils gnumake coreutils patch zlib zlib.dev curl git m4 bison flex ];
   };
 
   # Then we build the coreboot toolchain in this chroot. We manually
