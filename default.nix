@@ -117,16 +117,18 @@ rec {
       ln -s ${acpicaTar} util/crossgcc/tarballs/${acpicaTarName}
     '';
 
-    buildPhase = let
-      buildScript = pkgs.writeText "coreboot-toolchain-build" ''
-        export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+    buildPhase =
+      let
+        buildScript = pkgs.writeText "coreboot-toolchain-build" ''
+          export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
-        mkdir -p $out
-        make crossgcc-i386 CPUS=$(nproc) DEST=$out
+          mkdir -p $out
+          make crossgcc-i386 CPUS=$(nproc) DEST=$out
+        '';
+      in
+      ''
+        coreboot-env ${buildScript}
       '';
-    in ''
-      coreboot-env ${buildScript}
-    '';
 
     installPhase = ''
       echo Already installed.
